@@ -1,0 +1,1253 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Localizador de iglesias · Hoguera Santa</title>
+
+  <!-- ===================================================================== -->
+  <!--  BLOQUE EMBEBIBLE AUTOCONTENIDO · HOGUERA SANTA EN EL MONTE SIÓN       -->
+  <!--                                                                       -->
+  <!--  Cómo usar en WordPress + Elementor:                                  -->
+  <!--  1) Edita el objeto HS_CONFIG (más abajo) con tus URLs reales.        -->
+  <!--  2) Copia TODO el contenido entre <!-- HS:WIDGET-START --> y          -->
+  <!--     <!-- HS:WIDGET-END --> y pégalo en un widget "HTML" de Elementor. -->
+  <!--  3) Verifica que la API de iglesias permita CORS desde tu dominio.    -->
+  <!--                                                                       -->
+  <!--  No requiere servidor Node. Leaflet se carga por CDN.                 -->
+  <!-- ===================================================================== -->
+</head>
+<body style="margin:0;background:#f5e8df;">
+
+<!-- HS:WIDGET-START -->
+<div class="hs-locator" id="hs-locator">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
+  <style>
+    /* ---- Variables de tema (fuego) ---- */
+    .hs-locator {
+      --hs-accent: #e2451e;
+      --hs-accent-hover: #c2330f;
+      --hs-amber: #f5933d;
+      --hs-ink: #24130d;
+      --hs-paper: #ffffff;
+      --hs-cream: #faf3ee;
+      --hs-line: #e3d4c8;
+      --hs-muted: #8a7568;
+      --hs-radius: 14px;
+      --hs-shadow: 0 6px 28px rgba(36, 19, 13, 0.12);
+      --hs-font: 'Encode Sans Semi Expanded', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      font-family: var(--hs-font);
+      display: block;
+      width: 100%;
+      max-width: 760px;
+      margin: 0 auto;
+      color: var(--hs-ink);
+      box-sizing: border-box;
+      -webkit-text-size-adjust: 100%;
+    }
+    .hs-locator *, .hs-locator *::before, .hs-locator *::after { box-sizing: border-box; }
+
+    .hs-card {
+      position: relative;
+      background: var(--hs-paper);
+      border: 1px solid rgba(226, 69, 30, 0.18);
+      border-radius: var(--hs-radius);
+      box-shadow: var(--hs-shadow);
+      overflow: hidden;
+    }
+    .hs-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 4px;
+      background: linear-gradient(90deg, var(--hs-accent-hover), var(--hs-accent), var(--hs-amber));
+    }
+
+    .hs-head { padding: 1.25rem 1.25rem 0.75rem; }
+    .hs-eyebrow {
+      margin: 0 0 0.35rem; font-size: 0.7rem; font-weight: 600;
+      letter-spacing: 0.14em; text-transform: uppercase; color: var(--hs-accent-hover);
+    }
+    .hs-title {
+      margin: 0; font-size: clamp(1.15rem, 4vw, 1.5rem); font-weight: 700;
+      letter-spacing: -0.02em; line-height: 1.2;
+    }
+    .hs-sub { margin: 0.45rem 0 0; font-size: 0.92rem; line-height: 1.5; color: var(--hs-muted); }
+
+    .hs-body { padding: 0.5rem 1.25rem 1.25rem; }
+
+    /* ---- Buscador ---- */
+    .hs-search { position: relative; margin-top: 0.75rem; }
+    .hs-search__input {
+      width: 100%; font: inherit; font-size: 1.05rem; padding: 0.95rem 1rem;
+      border: 1.5px solid var(--hs-line); border-radius: var(--hs-radius);
+      background: var(--hs-cream); color: var(--hs-ink);
+    }
+    .hs-search__input:focus {
+      outline: none; border-color: var(--hs-accent);
+      box-shadow: 0 0 0 3px rgba(226, 69, 30, 0.18);
+    }
+    .hs-results {
+      position: absolute; z-index: 30; top: calc(100% + 0.35rem); left: 0; right: 0;
+      max-height: 16rem; overflow-y: auto; margin: 0; padding: 0.35rem; list-style: none;
+      background: var(--hs-paper); border: 1px solid var(--hs-line);
+      border-radius: var(--hs-radius); box-shadow: var(--hs-shadow);
+    }
+    .hs-results__opt {
+      display: flex; flex-direction: column; gap: 0.1rem; width: 100%;
+      padding: 0.7rem 0.8rem; border: none; background: transparent; border-radius: 9px;
+      text-align: left; cursor: pointer; font-family: var(--hs-font);
+    }
+    .hs-results__opt:hover, .hs-results__opt:focus-visible {
+      background: rgba(226, 69, 30, 0.08); outline: none;
+    }
+    .hs-results__name { font-size: 0.95rem; font-weight: 700; color: var(--hs-ink); }
+    .hs-results__meta { font-size: 0.78rem; color: var(--hs-muted); }
+
+    /* ---- Botón de ubicación ---- */
+    .hs-locate {
+      display: flex; align-items: center; gap: 0.75rem; width: 100%;
+      margin-top: 0.75rem; padding: 0.95rem 1.1rem;
+      border: 2px solid var(--hs-accent); border-radius: var(--hs-radius);
+      background: rgba(226, 69, 30, 0.07); text-align: left; cursor: pointer;
+      font-family: var(--hs-font); transition: background 0.2s;
+    }
+    .hs-locate:hover:not(:disabled) { background: rgba(226, 69, 30, 0.13); }
+    .hs-locate:disabled { opacity: 0.6; cursor: wait; }
+    .hs-locate__icon { font-size: 1.5rem; line-height: 1; }
+    .hs-locate__txt strong { display: block; font-size: 1rem; color: var(--hs-ink); }
+    .hs-locate__txt small { font-size: 0.8rem; color: var(--hs-muted); }
+
+    .hs-or {
+      margin: 0.75rem 0 0; text-align: center; font-size: 0.78rem;
+      font-weight: 600; color: var(--hs-muted);
+    }
+
+    /* ---- Mensajes ---- */
+    .hs-msg {
+      margin-top: 0.75rem; padding: 0.7rem 0.9rem; border-radius: 10px; font-size: 0.85rem;
+    }
+    .hs-msg--err { background: #fff5f3; border: 1px solid #f6c9bd; color: #b42318; }
+    .hs-msg--info { background: var(--hs-cream); border: 1px solid var(--hs-line); color: var(--hs-muted); }
+
+    /* ---- Lista de cercanas ---- */
+    .hs-nearby { margin-top: 0.85rem; }
+    .hs-nearby__title {
+      margin: 0 0 0.5rem; font-size: 0.72rem; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase; color: var(--hs-accent-hover);
+    }
+    .hs-nearby__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.4rem; }
+    .hs-nearby__item {
+      display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+      width: 100%; padding: 0.75rem 0.9rem; border: 1px solid var(--hs-line);
+      border-radius: 10px; background: var(--hs-paper); text-align: left; cursor: pointer;
+      font-family: var(--hs-font); transition: border-color 0.2s, background 0.2s;
+    }
+    .hs-nearby__item:hover, .hs-nearby__item:focus-visible {
+      border-color: var(--hs-accent); background: rgba(226, 69, 30, 0.06); outline: none;
+    }
+    .hs-nearby__main { min-width: 0; }
+    .hs-nearby__main strong { display:block; font-size: 0.9rem; line-height: 1.3; color: var(--hs-ink); }
+    .hs-nearby__main span { font-size: 0.75rem; color: var(--hs-muted); }
+    .hs-nearby__dist { flex-shrink: 0; font-size: 0.8rem; font-weight: 700; color: var(--hs-accent); white-space: nowrap; }
+
+    /* ---- Iglesia seleccionada ---- */
+    .hs-selected {
+      display: flex; align-items: center; gap: 0.75rem; margin-top: 0.85rem;
+      padding: 0.85rem 1rem; border-radius: var(--hs-radius);
+      background: linear-gradient(135deg, var(--hs-ink) 0%, #3a1c10 100%);
+    }
+    .hs-selected__icon {
+      flex-shrink: 0; width: 2.1rem; height: 2.1rem; display: flex; align-items: center;
+      justify-content: center; border-radius: 50%; background: var(--hs-accent); color: #fff;
+      font-size: 0.9rem; font-weight: 700;
+    }
+    .hs-selected__txt { flex: 1; min-width: 0; }
+    .hs-selected__txt small {
+      display: block; font-size: 0.62rem; font-weight: 600; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--hs-amber);
+    }
+    .hs-selected__txt strong {
+      display: block; font-size: 0.95rem; font-weight: 700; color: #fff;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .hs-selected__txt span { font-size: 0.76rem; color: rgba(255,255,255,0.7); }
+    .hs-selected__change {
+      flex-shrink: 0; padding: 0.4rem 0.7rem; border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 999px; background: rgba(255,255,255,0.08); color: #fff;
+      font-family: var(--hs-font); font-size: 0.74rem; font-weight: 600; cursor: pointer;
+    }
+
+    /* ---- Mapa ---- */
+    .hs-map-wrap {
+      position: relative; margin-top: 0.85rem; border-radius: var(--hs-radius);
+      overflow: hidden; border: 1px solid rgba(226, 69, 30, 0.2);
+    }
+    .hs-map { width: 100%; height: clamp(220px, 38vh, 300px); background: #e8e4df; }
+    .hs-map-wrap[hidden] { display: none; }
+    .hs-map-loading {
+      position: absolute; inset: 0; z-index: 500; display: flex; align-items: center;
+      justify-content: center; gap: 0.5rem; background: rgba(250, 243, 238, 0.92);
+      font-size: 0.85rem; font-weight: 600; color: var(--hs-ink);
+    }
+    .hs-spinner {
+      width: 1rem; height: 1rem; border: 2px solid rgba(226, 69, 30, 0.25);
+      border-top-color: var(--hs-accent); border-radius: 50%; animation: hs-spin 0.8s linear infinite;
+    }
+    @keyframes hs-spin { to { transform: rotate(360deg); } }
+
+    .hs-route {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+      gap: 0.5rem; margin-top: 0.6rem;
+    }
+    .hs-route__stats { font-size: 0.82rem; font-weight: 600; color: var(--hs-accent-hover); }
+    .hs-modes { display: inline-flex; gap: 0.4rem; }
+    .hs-mode {
+      display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.4rem 0.7rem;
+      border: 2px solid var(--hs-line); border-radius: 999px; background: var(--hs-paper);
+      font-family: var(--hs-font); font-size: 0.78rem; font-weight: 700; color: var(--hs-ink); cursor: pointer;
+    }
+    .hs-mode--active { border-color: var(--hs-accent); background: rgba(226, 69, 30, 0.1); color: var(--hs-accent-hover); }
+
+    .hs-navlinks { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 0.6rem; }
+    .hs-navlink {
+      display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.45rem 0.85rem;
+      border-radius: 999px; font-size: 0.8rem; font-weight: 600; text-decoration: none;
+      color: var(--hs-ink); background: rgba(226, 69, 30, 0.1); border: 1px solid rgba(226, 69, 30, 0.3);
+    }
+    .hs-navlink--muted { background: var(--hs-paper); border-color: var(--hs-line); color: var(--hs-muted); font-weight: 500; }
+
+    /* ---- Acciones finales ---- */
+    .hs-actions { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 1.1rem; }
+    .hs-btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+      min-height: 3.1rem; padding: 0.85rem 1.25rem; border: none; border-radius: 999px;
+      font-family: var(--hs-font); font-size: 1rem; font-weight: 700; text-decoration: none;
+      cursor: pointer; text-align: center; transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+    }
+    .hs-btn--primary { background: var(--hs-accent); color: #fff; box-shadow: 0 2px 12px var(--hs-accent-glow, rgba(226,69,30,0.38)); }
+    .hs-btn--primary:hover { background: var(--hs-accent-hover); transform: translateY(-2px); }
+    .hs-btn--outline { background: var(--hs-paper); color: var(--hs-accent-hover); border: 2px solid var(--hs-accent); }
+    .hs-btn--outline:hover { background: rgba(226, 69, 30, 0.07); }
+    .hs-btn--ghost { background: var(--hs-cream); color: var(--hs-ink); border: 1px solid var(--hs-line); }
+    .hs-btn[disabled], .hs-btn[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
+
+    .hs-legal { margin: 0.85rem 0 0; font-size: 0.72rem; line-height: 1.5; color: var(--hs-muted); }
+
+    /* ---- Pines del mapa ---- */
+    .hs-pin { background: transparent; border: none; }
+    .hs-pin--user span {
+      display: block; width: 22px; height: 22px; border-radius: 50%;
+      background: var(--hs-ink); border: 3px solid #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.35);
+    }
+    .hs-pin--church span {
+      display: block; width: 0; height: 0; border-left: 11px solid transparent;
+      border-right: 11px solid transparent; border-bottom: 20px solid var(--hs-accent);
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.35));
+    }
+    .hs-pin--selected span { border-bottom-color: #a8260b; transform: scale(1.18); }
+
+    @media (min-width: 560px) {
+      .hs-actions { flex-direction: row; flex-wrap: wrap; }
+      .hs-actions .hs-btn { flex: 1 1 220px; }
+    }
+  </style>
+
+  <div class="hs-card">
+    <div class="hs-head">
+      <p class="hs-eyebrow">Localiza tu Universal</p>
+      <h2 class="hs-title">Encuentra la Universal más cercana</h2>
+      <p class="hs-sub">
+        Busca tu iglesia por nombre o ciudad para llevar tu petición al Altar
+        y que sea enviada al Monte Sión.
+      </p>
+    </div>
+
+    <div class="hs-body">
+      <div class="hs-search">
+        <input
+          id="hs-search-input"
+          type="search"
+          class="hs-search__input"
+          placeholder="Escribe el nombre o la ciudad de tu Universal…"
+          autocomplete="off"
+          enterkeyhint="search"
+          aria-label="Buscar iglesia por nombre o ciudad"
+        />
+        <ul id="hs-results" class="hs-results" role="listbox" hidden></ul>
+      </div>
+
+      <button type="button" id="hs-locate" class="hs-locate">
+        <span class="hs-locate__icon" aria-hidden="true">📍</span>
+        <span class="hs-locate__txt">
+          <strong>Usar mi ubicación</strong>
+          <small>Te mostramos las Universal más cercanas a ti</small>
+        </span>
+      </button>
+
+      <div id="hs-message" class="hs-msg hs-msg--info" hidden></div>
+
+      <div id="hs-nearby" class="hs-nearby" hidden>
+        <p class="hs-nearby__title">Universal cercanas a ti</p>
+        <ul id="hs-nearby-list" class="hs-nearby__list"></ul>
+      </div>
+
+      <div id="hs-selected" class="hs-selected" hidden>
+        <span class="hs-selected__icon" aria-hidden="true">✓</span>
+        <span class="hs-selected__txt">
+          <small>Tu Universal para la petición</small>
+          <strong id="hs-selected-name"></strong>
+          <span id="hs-selected-addr"></span>
+        </span>
+        <button type="button" id="hs-selected-change" class="hs-selected__change">Cambiar</button>
+      </div>
+
+      <div id="hs-map-wrap" class="hs-map-wrap" hidden>
+        <div id="hs-map-loading" class="hs-map-loading" hidden>
+          <span class="hs-spinner" aria-hidden="true"></span><span id="hs-map-loading-text">Cargando mapa…</span>
+        </div>
+        <div id="hs-map" class="hs-map" aria-label="Mapa de la iglesia"></div>
+      </div>
+
+      <div id="hs-route" class="hs-route" hidden>
+        <span id="hs-route-stats" class="hs-route__stats"></span>
+        <span class="hs-modes" role="tablist" aria-label="Modo de viaje">
+          <button type="button" class="hs-mode hs-mode--active" data-mode="foot">🚶 A pie</button>
+          <button type="button" class="hs-mode" data-mode="driving">🚗 Auto</button>
+        </span>
+      </div>
+
+      <div id="hs-navlinks" class="hs-navlinks" hidden></div>
+
+      <div class="hs-actions">
+        <a id="hs-download" class="hs-btn hs-btn--outline" target="_blank" rel="noopener noreferrer">
+          📄 Descargar mi petición
+        </a>
+        <a id="hs-vote" class="hs-btn hs-btn--primary" target="_blank" rel="noopener noreferrer">
+          🔥 Hacer mi voto de fe
+        </a>
+      </div>
+      <a id="hs-call" class="hs-btn hs-btn--ghost" style="margin-top:0.6rem;">📞 ¿Necesitas ayuda? Llama al <span id="hs-tel"></span></a>
+
+      <p class="hs-legal">
+        Estas donaciones se destinan única y exclusivamente al funcionamiento y continuidad
+        de la obra de Dios.
+      </p>
+    </div>
+  </div>
+
+  <script>
+  (function () {
+    'use strict';
+
+    /* ===================================================================== */
+    /*  CONFIGURACIÓN — edita estos valores antes de publicar                */
+    /* ===================================================================== */
+    var HS_CONFIG = {
+      // URL de la API de iglesias (formato bloques). Déjalo vacío para usar
+      // únicamente el catálogo embebido de abajo. Debe permitir CORS desde tu dominio.
+      iglesiasApiUrl: '',
+      // Si tu API exige API key, NO la pongas aquí (queda expuesta en el navegador).
+      // Configura la API para autorizar por CORS/origen. Solo úsala en pruebas.
+      iglesiasApiKey: '',
+      // Enlace al portal de pago/voto de fe ya existente (Mercado Pago / Mercado Libre).
+      // REEMPLAZA con tu URL real.
+      portalUrl: 'https://www.mercadopago.com.mx/',
+      // URL de la hoja de petición (peticion.html). En WordPress, sube el archivo
+      // o usa la URL absoluta. Por defecto apunta a la hoja del demo.
+      peticionUrl: '../peticion.html',
+      telefono: '55 55 74 32 66',
+      telefonoHref: '+525555743266',
+      nominatimBase: 'https://nominatim.openstreetmap.org',
+      osrmBase: 'https://router.project-osrm.org/route/v1'
+    };
+
+    /* ===================================================================== */
+    /*  CATÁLOGO EMBEBIDO (respaldo si la API falla o no hay CORS)           */
+    /*  Formato bloques: [{ bloque, iglesias: [ "NOMBRE - CIUDAD", ... ] }]   */
+    /*  También admite objetos: { nombre, direccion, lat, lng }              */
+    /* ===================================================================== */
+    var HS_FALLBACK_CATALOG = [
+  {
+    "bloque": "BLOQUE TOLUCA",
+    "iglesias": [
+      "SAN SEBASTIAN - TOLUCA",
+      "LA GARITA ATLACOMULCO - ATLACOMULCO",
+      "CENTRO - IXTLAHUACA",
+      "JOSE MARIA MORELOS - ZITACUARO",
+      "RACHO SAN FRANCISCO - METEPEC",
+      "BARRIO DE SAN JUAN - SAN MATEO ATENCO",
+      "PASEO DE LOS INSURGENTES - TENANCINGO",
+      "LOMAS DEL MIRADOR - CUERNAVACA",
+      "CENTRO - JOJUTLA",
+      "LA PRADERA - CUERNAVACA",
+      "MANANTIALES - CUAUTLA"
+    ]
+  },
+  {
+    "bloque": "TACUBAYA",
+    "iglesias": [
+      "SEDE NACIONAL - TACUBAYA - MIGUEL HIDALGO"
+    ]
+  },
+  {
+    "bloque": "BLOQUE CUAUHTÉMOC (YUCATAN)",
+    "iglesias": [
+      "ROMA - CUAUHTEMOC",
+      "ROMERO RUBIO - VENUSTIANO CARRANZA",
+      "SANTA FE",
+      "SANTA MARIA LA RIBERA - CUAUHTEMOC",
+      "CENTRO - CUAUHTEMOC",
+      "ATZACOALCO - GUSTAVO A. MADERO",
+      "TICOMAN - GUSTAVO A MADERO.",
+      "LAZARO CARDENAS - TLANELPANTLA",
+      "MAXIMO AVILA CAMACHO - GUSTAVO A. MADERO",
+      "PROVIDENCIA - GUSTAVO A. MADERO",
+      "AZCAPOTZALCO",
+      "ALAMOS - BENITO JUAREZ",
+      "SAN JUANICO NEXTIPAC - IZTAPALAPA",
+      "GRANJAS MEXICO - IZTACALCO"
+    ]
+  },
+  {
+    "bloque": "BLOQUE NEZA",
+    "iglesias": [
+      "METROPOLITANA 2 SECCION - NEZAHUALCOYOTL",
+      "LOMA BONITA - NEZAHUALCOYOTL",
+      "ESTADO DE MEXICO - NEZAHUALCOYOTL",
+      "CENTRO LOS REYES ACAQUILPAN - LA PAZ",
+      "AMPLIACION JOSE VICENTE VILLADA - NEZAHUALCOYOTL",
+      "BARRIO CANTEROS - CHIMALHUACAN",
+      "CENTRO - CHIMALHUACAN",
+      "JARDINES DE ACUITLAPILCO - CHIMALHUACAN",
+      "VILLA SAN AGUSTIN CHIMALHUACAN",
+      "CENTRO - TEXCOCO",
+      "CABEZA MUNICIPAL - CHICOLOAPAN"
+    ]
+  },
+  {
+    "bloque": "BLOQUE IZTAPALAPA",
+    "iglesias": [
+      "AMPLIACION SAN MIGUEL - IZTAPALAPA",
+      "ALFONSO TIRADO - IZTAPALAPA",
+      "AMPLIACION SANTA MARIA AZTAHUACAN - IZTAPALAPA",
+      "SANTA MARTHA ACATITLA - IZTAPALAPA",
+      "SANTA BARBARA - IXTAPALUCA",
+      "DARIO MARTINEZ II - VALLE DE CHALCO",
+      "ZANTIAGO ZAPOTITLAN - TLAHUAC",
+      "BARRIO LOS REYES - TLAHUAC",
+      "SAN MIGUEL XICO 2 SECCION - VALLE DE CHALCO",
+      "SAN ISIDRO - VALLE DE CHALCO SOLIDARIDAD",
+      "CENTRO - CHALCO",
+      "SAN GREGORIO CUAUTZINGO - CHALCO"
+    ]
+  },
+  {
+    "bloque": "BLOQUE ECATEPEC",
+    "iglesias": [
+      "SAN JUAN ALCAHUACAN - ECATEPEC",
+      "PARQUE RESIDENCIAL COACALCO PRIMERA SECCION - COACALCO",
+      "LOS ANGELES - ACOLMAN",
+      "BARRIO DE SAN RAFAEL - TULTEPEC",
+      "SAN PABLO DE LAS SALINAS - TULTITLAN",
+      "VILLA ESMERALDA - TULTITLAN",
+      "SAN FRANCISCO CHILPAN - TULTITLAN",
+      "BARRIO SAN BARTOLO - TULTITLAN",
+      "EJIDO BUENAVISTA II - TULTITLAN",
+      "SECCION FLORES - ECATEPEC",
+      "SANTO TOMAS CHICONAUTLA - ECATEPEC",
+      "CIUDAD AZTECA - ECATEPEC",
+      "FRACCIONAMIENTO GRANJAS VALLE DE GUADALUPE",
+      "VALLE DE ARAGON - ECATEPEC",
+      "CENTRO - TECAMAC",
+      "TEPEYAC - TIZAYUCA",
+      "SANTA CRUZ - TECAMAC",
+      "BARRIO DE SAN JUAN ZUMPANGO - ZUMPANGO"
+    ]
+  },
+  {
+    "bloque": "BLOQUE XOCHIMILCO",
+    "iglesias": [
+      "AMPLIACION SAN MARCOS - XOCHIMILCO",
+      "TENORIOS - TLALPAN",
+      "AJUSCO",
+      "SAN FRANCISCO CULHUACAN - COYOACAN",
+      "AJUSCO - COYOACAN",
+      "COPILCO - COYOACAN",
+      "BARRIO DE LA CONCEPCIÓN - MILPA ALTA",
+      "SAN JERONIMO - MAGDALENA CONTRERAS",
+      "CUAUHTEMOC - MAGDALENA CONTRERAS"
+    ]
+  },
+  {
+    "bloque": "BLOQUE NAUCALPAN",
+    "iglesias": [
+      "PARQUE INDUSTRIAL NAUCALPAN - NAUCALPAN",
+      "CUAJIMALPA",
+      "SAN MATEO NOPALA - NAUCALPAN",
+      "CENTRO - TLALNEPANTLA",
+      "PUEBLO DE CUAUTEPEC EL ALTO - GUSTAVO A. MADERO",
+      "SAN LUCAS PATONI - TLALNEPANTLA",
+      "PROGRESO NACIONAL - GUSTAVO A. MADERO",
+      "CENTRO - ATIZAPAN",
+      "MARGARITA DE JUAREZ - ATIZAPAN",
+      "HIDALGO - VILLA NICOLAS ROMERO",
+      "EL HUERTO - CUAUTITLAN",
+      "CENTRO URBANO - CUAUTITLAN IZCALLI",
+      "NOXTONGO - TEPEJI DEL RIO",
+      "TRES PICOS - CUAUTITLAN IZCALLI",
+      "CENTRO - HUEHUETOCA"
+    ]
+  },
+  {
+    "bloque": "LEON GUANAJUATO",
+    "iglesias": [
+      "LA FLORIDA - LEON",
+      "VISTA HERMOSA - LEON",
+      "BARRIO SANTA RITA - SAN FRANCISCO DEL RINCON",
+      "CENTRO - IRAPUATO",
+      "CENTRO - VALLE DE SANTIAGO",
+      "CENTRO - SALAMANCA",
+      "CENTRO - SILAO",
+      "YERBABUENA - GUANAJUATO",
+      "CENTRO - AGUASCALIENTES",
+      "VERSALLES - AGUASCALIENTES",
+      "CENTRO - JESUS MARIA"
+    ]
+  },
+  {
+    "bloque": "BLOQUE SINALOA",
+    "iglesias": [
+      "MIGUEL ALEMAN - CULIACAN",
+      "CENTRO - HERMOSILLO",
+      "CENTRO - CIUDAD OBREGON",
+      "CENTRO - GUAYMAS",
+      "CENTRO - NOGALES",
+      "CENTRO - LOS MOCHIS",
+      "CENTRO - GUASAVE",
+      "JUAREZ - NOVOJOA",
+      "CENTRO - MAZATLAN"
+    ]
+  },
+  {
+    "bloque": "BLOQUE NUEVO LEON",
+    "iglesias": [
+      "CENTRO - MONTERREY",
+      "CENTRO - SALTILLO",
+      "CENTRO - PIEDRAS NEGRAS",
+      "CENTRO - MONCLOVA",
+      "CENTRO - DURANGO",
+      "CENTRO - TORREON",
+      "CENTRO - GOMEZ PALACIO",
+      "CENTRO - LERDO",
+      "SAN BERNANBE II - MONTERREY",
+      "CUMBRES DE SANTA CATARINA - NUEVO LEON",
+      "FRACCIONAMIENTO CAMINO REAL - GUADALUPE NUEVO LEON",
+      "ZONA CENTRO - APODACA",
+      "CENTRO - CADEREYTA",
+      "CENTRO - SAN NICOLAS DE LOS GARZA",
+      "CENTRO - REYNOSA",
+      "CENTRO - MATAMOROS",
+      "JUAREZ - NUEVO LAREDO",
+      "JARDINES DE LINDAVISTA - GUADALUPE",
+      "CENTRO - TAMPICO",
+      "CENTRO - ALTAMIRA",
+      "CENTRO - CIUDAD VICTORIA",
+      "CENTRO - CHIHUAHUA",
+      "CENTRO - CD JUAREZ",
+      "SAN ANTONIO - CUAUHTEMOC",
+      "DELICIAS"
+    ]
+  },
+  {
+    "bloque": "BLOQUE QUERETARO",
+    "iglesias": [
+      "CENTRO - QUERETARO",
+      "CENTRO - SAN LUIS POTOSI",
+      "CENTRO - RIO VERDE",
+      "CENTRO - CELAYA",
+      "CENTRO - CORTAZAR",
+      "CENTRO - ACAMBARO",
+      "CENTRO - SALVATIERRA",
+      "CENTRO - SAN JUAN DEL RIO",
+      "CENTRO - CADEREYTA DE MONTES",
+      "CENTRO - SAN MIGUEL DE ALLENDE",
+      "CENTRAL - SAN LUIS DE LA PAZ",
+      "CENTRO - DOLORES HIDALGO",
+      "UNIDAD NACIONAL - QUERETARO",
+      "CENTRO - ZACATECAS",
+      "CENTRO - FRESNILLO"
+    ]
+  },
+  {
+    "bloque": "BLOQUE TIJUANA",
+    "iglesias": [
+      "GAVILONDO - TIJUANA",
+      "PUEBLO NUEVO - LA PAZ",
+      "MATAMOROS - CABO SAN LUCAS",
+      "JESUS CASTRO AGUNEZ - LOS CABOS",
+      "CENTRO - MEXICALI",
+      "COMERCIAL - SAN LUIS RIO COLORADO",
+      "CENTRO - GUADALUPE VICTORIA",
+      "ZONA CENTRO - ENSENADA",
+      "MARIANO MATAMOROS NORTE - TIJUANA",
+      "CONSTITUCIÓN - ROSARITO",
+      "FRACCIONAMIENTO - ROMERO"
+    ]
+  },
+  {
+    "bloque": "BLOQUE VERACRUZ",
+    "iglesias": [
+      "CENTRO - VERACRUZ",
+      "CENTRO - TUXTLA GUTIERREZ",
+      "BARRIO EL CALVARIO - COMITAN",
+      "CENTRO - TAPACHULA",
+      "BARRIO NORTE - OCOSINGO CHIAPAS",
+      "CENTRO - SAN CRISTOBAL DE LAS CASAS",
+      "ZONA CENTRO - XALAPA",
+      "CENTRO - COATZACOALCOS",
+      "GUAYABAL - MINATITLAN",
+      "CENTRO - SAN ANDRES TUXTLA",
+      "CENTRO - MARTINEZ DE LA TORRE",
+      "CENTRO - ORIZABA",
+      "CENTRO - HUATUSCO",
+      "CENTRO - CORDOBA",
+      "BENITO JUAREZ - POZA RICA",
+      "DEL VALLE - TUXPAN",
+      "FORMANDO HOGAR - VERACRUZ",
+      "CENTRO - TIERRA BLANCA",
+      "LA PIRAGUA - TUXTEPEC",
+      "CENTRO - BOCA DEL RIO",
+      "CENTRO - VILLAHERMOSA",
+      "COMALCALCO",
+      "PUEBLO NUEVO - CARDENAS TABASCO",
+      "CENTRO - PALENQUE"
+    ]
+  },
+  {
+    "bloque": "BLOQUE PUEBLA",
+    "iglesias": [
+      "SANTIAGO - PUEBLA",
+      "CENTRO - TLAXCALA",
+      "CENTRO - APIZACO",
+      "SANTA ANA CHIAUTEMPAN - TLAXCALA",
+      "CESPEDES - PACHUCA",
+      "COLONIA NUEVO TULANCINGO - TULANCINGO DE BRAVO",
+      "CENTRO - TULA DE ALLENDE",
+      "CAMPESINA - SAHAGUN",
+      "HIDALGO UNIDO - PACHUCA",
+      "CHAPULTEPEC - PUEBLA",
+      "ALVARO OBREGON - ATLIXCO",
+      "FLORES MAGON - TEHUACAN",
+      "EL REFUGIO - PUEBLA",
+      "CENTRO - TEZIUTLAN",
+      "CENTRO - ZACAPOAXTLA",
+      "CENTRO - HUAUCHINANGO",
+      "CENTRO - ZACATLAN",
+      "CHOLULA DE RIBADAVIA"
+    ]
+  },
+  {
+    "bloque": "BLOQUE CANCUN QR.",
+    "iglesias": [
+      "SUPERMANZANA 15A CANCUN - Qroo",
+      "CENTRO - MERIDA",
+      "PROGRESO - MERIDA",
+      "BARRIO LA ERMITA - CAMPECHE",
+      "CENTRO - CD DEL CARMEN",
+      "CENTRO - COZUMEL",
+      "CENTRO - CHETUMAL",
+      "GONZALO GUERRERO - PLAYA DEL CARMEN",
+      "SUPERMANZANA 70 CANCUN - Qroo"
+    ]
+  },
+  {
+    "bloque": "BLOQUE JALISCO",
+    "iglesias": [
+      "CENTRO - GUADALAJARA",
+      "CUAUHTEMOC - MORELIA",
+      "CENTRO - ZAMORA",
+      "REVOLUCION - URUAPAN",
+      "CENTRO - LAZARO CARDENAS",
+      "CENTRO - COLIMA",
+      "SOLEARES - MANZANILLO",
+      "CENTRO TEPIC",
+      "HACIENDA SANTA FE - TLAJOMULCO",
+      "EL CAMPESINO - TLAQUEPAQUE",
+      "POLANCO ORIENTE - GUADALAJARA",
+      "LOMAS DEL PARAISO - - GUADALAJARA",
+      "OBLATOS - GUADALAJARA",
+      "OLIMPICA - PUERTO VALLARTA",
+      "MESEROS - TLAQUEPAQUE",
+      "CENTRO - TONALA",
+      "CENTRO - EL SALTO",
+      "CENTRO - TEPATITLAN",
+      "JARDINES DE VALLARTA - ZAPOPAN",
+      "ARENALES TAPATIOS - ZAPOPAN"
+    ]
+  },
+  {
+    "bloque": "BLOQUE GUERRERO",
+    "iglesias": [
+      "BELLAVISTA - ACAPULCO",
+      "CENTRO - OAXACA",
+      "OAXACA - SANTA MARIA ATZOMPA",
+      "CENTRO - CHILPANCINGO",
+      "HUITZICATZIN - CHILPANCINGO",
+      "IGUALA",
+      "FRACCIONAMIENTO LIBERTADORES - ACAPULCO",
+      "LA SABANA - ACAPULCO",
+      "JARDIN - SAN MARCOS",
+      "EL HUJAL - ZIHUATANEJO",
+      "COLONIA COLOSO - GUERRERO"
+    ]
+  }
+];
+
+    /* ===================================================================== */
+    /*  Utilidades                                                           */
+    /* ===================================================================== */
+    function slugify(str) {
+      return String(str || '')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    }
+    function normalizePlace(str) {
+      return String(str || '')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+    function localityFromName(name) {
+      var parts = String(name).split(' - ');
+      return parts.length < 2 ? '' : (parts[parts.length - 1] || '').trim();
+    }
+    function haversineKm(lat1, lng1, lat2, lng2) {
+      var R = 6371, toRad = function (d) { return d * Math.PI / 180; };
+      var dLat = toRad(lat2 - lat1), dLng = toRad(lng2 - lng1);
+      var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+    function formatDistance(km) {
+      if (km == null) return '';
+      if (km < 1) return Math.round(km * 1000) + ' m';
+      if (km < 10) return km.toFixed(1) + ' km';
+      return Math.round(km) + ' km';
+    }
+    function formatDuration(s) {
+      var m = Math.max(1, Math.round(s / 60));
+      if (m < 60) return m + ' min';
+      var h = Math.floor(m / 60), r = m % 60;
+      return r ? h + ' h ' + r + ' min' : h + ' h';
+    }
+
+    function buildCatalog(rawBloques) {
+      var items = [];
+      (rawBloques || []).forEach(function (entry) {
+        var bloqueLabel = (entry && entry.bloque || '').trim();
+        if (!bloqueLabel) return;
+        var bloqueId = slugify(bloqueLabel) || 'bloque';
+        var counts = {};
+        (entry.iglesias || []).forEach(function (raw) {
+          var name, direccion, lat, lng;
+          if (typeof raw === 'string') {
+            name = raw.trim();
+          } else if (raw && raw.nombre) {
+            name = String(raw.nombre).trim();
+            direccion = raw.direccion ? String(raw.direccion).trim() : undefined;
+            lat = typeof raw.lat === 'number' ? raw.lat : undefined;
+            lng = typeof raw.lng === 'number' ? raw.lng : undefined;
+          }
+          if (!name) return;
+          var occ = counts[name] || 0; counts[name] = occ + 1;
+          var nameSlug = slugify(name) || 'iglesia';
+          var id = bloqueId + '|' + (occ === 0 ? nameSlug : nameSlug + '-' + (occ + 1));
+          items.push({
+            id: id, name: name, bloque: bloqueLabel, bloqueId: bloqueId,
+            direccion: direccion, lat: lat, lng: lng
+          });
+        });
+      });
+      items.sort(function (a, b) { return a.name.localeCompare(b.name, 'es'); });
+      return items;
+    }
+
+    /* ---- Nominatim throttling + cache ---- */
+    var lastNominatim = 0;
+    function throttleNominatim() {
+      var now = Date.now(), wait = Math.max(0, 1100 - (now - lastNominatim));
+      lastNominatim = now + wait;
+      return new Promise(function (r) { setTimeout(r, wait); });
+    }
+    function coordCacheGet(id) {
+      try {
+        var raw = localStorage.getItem('hs_coords_' + id);
+        return raw ? JSON.parse(raw) : null;
+      } catch (e) { return null; }
+    }
+    function coordCacheSet(id, coords) {
+      try { localStorage.setItem('hs_coords_' + id, JSON.stringify(coords)); } catch (e) {}
+    }
+
+    async function nominatimSearch(query) {
+      await throttleNominatim();
+      var url = HS_CONFIG.nominatimBase + '/search?' + new URLSearchParams({
+        q: query, format: 'json', limit: '1', countrycodes: 'mx', 'accept-language': 'es'
+      });
+      var res = await fetch(url, { headers: { Accept: 'application/json' } });
+      if (!res.ok) return null;
+      var data = await res.json();
+      if (!data || !data[0]) return null;
+      var lat = Number(data[0].lat), lng = Number(data[0].lon);
+      if (!isFinite(lat) || !isFinite(lng)) return null;
+      return { lat: lat, lng: lng };
+    }
+    async function reverseGeocode(lat, lng) {
+      try {
+        await throttleNominatim();
+        var url = HS_CONFIG.nominatimBase + '/reverse?' + new URLSearchParams({
+          lat: String(lat), lon: String(lng), format: 'json', 'accept-language': 'es'
+        });
+        var res = await fetch(url, { headers: { Accept: 'application/json' } });
+        if (!res.ok) return {};
+        var data = await res.json();
+        return data.address || {};
+      } catch (e) { return {}; }
+    }
+    async function geocodeChurch(item) {
+      var cached = coordCacheGet(item.id);
+      if (cached) return cached;
+      var locality = localityFromName(item.name) ||
+        (item.bloque || '').replace(/^bloque\s+/i, '').replace(/\s*\([^)]*\)/, '').trim();
+      var queries = [
+        item.direccion ? item.direccion + ', México' : null,
+        locality ? 'Iglesia Universal del Reino de Dios ' + item.name + ', ' + locality + ', México' : null,
+        locality ? item.name + ', ' + locality + ', México' : null,
+        'Iglesia Universal ' + item.name + ', México'
+      ].filter(Boolean);
+      for (var i = 0; i < queries.length; i++) {
+        var hit = await nominatimSearch(queries[i]);
+        if (hit) { coordCacheSet(item.id, hit); return hit; }
+      }
+      return null;
+    }
+    async function fetchRoute(from, to, mode) {
+      var coords = from.lng + ',' + from.lat + ';' + to.lng + ',' + to.lat;
+      var url = HS_CONFIG.osrmBase + '/' + mode + '/' + coords + '?' +
+        new URLSearchParams({ overview: 'full', geometries: 'geojson', alternatives: 'false' });
+      var res = await fetch(url);
+      if (!res.ok) throw new Error('route');
+      var data = await res.json();
+      if (data.code !== 'Ok' || !data.routes || !data.routes[0]) throw new Error('noroute');
+      var r = data.routes[0];
+      return {
+        distanceM: r.distance, durationS: r.duration,
+        geometry: r.geometry.coordinates.map(function (c) { return [c[1], c[0]]; })
+      };
+    }
+
+    /* ===================================================================== */
+    /*  Estado + referencias DOM                                             */
+    /* ===================================================================== */
+    var $ = function (id) { return document.getElementById(id); };
+    var state = {
+      items: [], selected: null, userPoint: null, mode: 'foot',
+      route: null, map: null, markers: null, routeLine: null, L: null
+    };
+
+    var el = {
+      input: $('hs-search-input'), results: $('hs-results'), locate: $('hs-locate'),
+      message: $('hs-message'), nearby: $('hs-nearby'), nearbyList: $('hs-nearby-list'),
+      selected: $('hs-selected'), selName: $('hs-selected-name'), selAddr: $('hs-selected-addr'),
+      change: $('hs-selected-change'), mapWrap: $('hs-map-wrap'), map: $('hs-map'),
+      mapLoading: $('hs-map-loading'), mapLoadingText: $('hs-map-loading-text'),
+      route: $('hs-route'), routeStats: $('hs-route-stats'), navlinks: $('hs-navlinks'),
+      download: $('hs-download'), vote: $('hs-vote'), call: $('hs-call'), tel: $('hs-tel')
+    };
+
+    /* ---- Helpers UI ---- */
+    function showMessage(text, kind) {
+      el.message.textContent = text;
+      el.message.className = 'hs-msg hs-msg--' + (kind || 'info');
+      el.message.hidden = !text;
+    }
+    function postHeight() {
+      try {
+        var h = document.getElementById('hs-locator').scrollHeight;
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({ hsLocatorHeight: h }, '*');
+        }
+      } catch (e) {}
+    }
+
+    /* ===================================================================== */
+    /*  Carga de catálogo                                                    */
+    /* ===================================================================== */
+    async function loadCatalog() {
+      if (HS_CONFIG.iglesiasApiUrl) {
+        try {
+          var headers = { Accept: 'application/json' };
+          if (HS_CONFIG.iglesiasApiKey) headers['X-API-Key'] = HS_CONFIG.iglesiasApiKey;
+          var res = await fetch(HS_CONFIG.iglesiasApiUrl, { headers: headers });
+          if (res.ok) {
+            var data = await res.json();
+            if (Array.isArray(data) && data.length) {
+              state.items = buildCatalog(data);
+              return;
+            }
+          }
+        } catch (e) {
+          console.warn('[hoguera] API de iglesias no disponible, usando catálogo embebido.', e);
+        }
+      }
+      state.items = buildCatalog(HS_FALLBACK_CATALOG);
+    }
+
+    /* ===================================================================== */
+    /*  Búsqueda por nombre / ciudad                                         */
+    /* ===================================================================== */
+    function filterItems(query) {
+      var q = normalizePlace(query);
+      if (q.length < 2) return [];
+      return state.items.filter(function (it) {
+        var hay = normalizePlace(it.name + ' ' + it.bloque + ' ' + (it.direccion || ''));
+        return hay.indexOf(q) !== -1;
+      }).slice(0, 8);
+    }
+    function renderResults(list) {
+      el.results.innerHTML = '';
+      if (!list.length) { el.results.hidden = true; return; }
+      list.forEach(function (it) {
+        var li = document.createElement('li');
+        li.setAttribute('role', 'option');
+        var btn = document.createElement('button');
+        btn.type = 'button'; btn.className = 'hs-results__opt';
+        var sub = it.direccion || localityFromName(it.name) || it.bloque;
+        btn.innerHTML = '<span class="hs-results__name"></span><span class="hs-results__meta"></span>';
+        btn.querySelector('.hs-results__name').textContent = it.name;
+        btn.querySelector('.hs-results__meta').textContent = sub;
+        btn.addEventListener('click', function () { selectChurch(it); });
+        li.appendChild(btn); el.results.appendChild(li);
+      });
+      el.results.hidden = false;
+      postHeight();
+    }
+
+    /* ===================================================================== */
+    /*  Mapa (Leaflet, carga diferida por CDN)                               */
+    /* ===================================================================== */
+    function ensureLeaflet() {
+      if (window.L) { state.L = window.L; return Promise.resolve(window.L); }
+      if (ensureLeaflet._p) return ensureLeaflet._p;
+      ensureLeaflet._p = new Promise(function (resolve, reject) {
+        var s = document.createElement('script');
+        s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+        s.integrity = 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';
+        s.crossOrigin = '';
+        s.onload = function () { state.L = window.L; resolve(window.L); };
+        s.onerror = function () { reject(new Error('leaflet')); };
+        document.head.appendChild(s);
+      });
+      return ensureLeaflet._p;
+    }
+    async function initMap() {
+      var L = await ensureLeaflet();
+      if (state.map) return state.map;
+      state.map = L.map(el.map, { zoomControl: true, attributionControl: true });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19, attribution: '&copy; OpenStreetMap'
+      }).addTo(state.map);
+      state.markers = L.layerGroup().addTo(state.map);
+      state.map.setView(state.userPoint ? [state.userPoint.lat, state.userPoint.lng] : [19.4326, -99.1332], 13);
+      return state.map;
+    }
+    function churchIcon(selected) {
+      return state.L.divIcon({
+        className: 'hs-pin hs-pin--church' + (selected ? ' hs-pin--selected' : ''),
+        html: '<span></span>', iconSize: [26, 26], iconAnchor: [13, 24]
+      });
+    }
+    function renderMarkers() {
+      if (!state.map || !state.markers) return;
+      state.markers.clearLayers();
+      var L = state.L, bounds = [];
+      if (state.userPoint) {
+        L.marker([state.userPoint.lat, state.userPoint.lng], {
+          icon: L.divIcon({ className: 'hs-pin hs-pin--user', html: '<span></span>', iconSize: [22, 22], iconAnchor: [11, 11] }),
+          zIndexOffset: 1000
+        }).bindPopup('Tú estás aquí').addTo(state.markers);
+        bounds.push([state.userPoint.lat, state.userPoint.lng]);
+      }
+      state.items.forEach(function (it) {
+        if (typeof it.lat !== 'number' || typeof it.lng !== 'number') return;
+        var sel = state.selected && it.id === state.selected.id;
+        L.marker([it.lat, it.lng], { icon: churchIcon(sel), zIndexOffset: sel ? 900 : 0 })
+          .bindPopup('<strong>' + it.name + '</strong>')
+          .on('click', function () { selectChurch(it); })
+          .addTo(state.markers);
+      });
+      if (state.selected && typeof state.selected.lat === 'number') {
+        bounds.push([state.selected.lat, state.selected.lng]);
+      }
+      if (bounds.length >= 2) {
+        state.map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
+      } else if (bounds.length === 1) {
+        state.map.setView(bounds[0], 14);
+      }
+    }
+    function drawRoute(geometry) {
+      if (state.routeLine) { state.map.removeLayer(state.routeLine); state.routeLine = null; }
+      if (!geometry || geometry.length < 2) return;
+      state.routeLine = state.L.polyline(geometry, {
+        color: state.mode === 'foot' ? '#2563eb' : '#e2451e', weight: 5, opacity: 0.85
+      }).addTo(state.map);
+    }
+
+    /* ===================================================================== */
+    /*  Selección de iglesia                                                 */
+    /* ===================================================================== */
+    async function selectChurch(item) {
+      state.selected = item;
+      el.input.value = '';
+      el.results.hidden = true;
+      el.nearby.hidden = true;
+      // Tarjeta seleccionada
+      el.selName.textContent = item.name;
+      el.selAddr.textContent = item.direccion || item.bloque;
+      el.selected.hidden = false;
+      // Acciones
+      updateActionLinks();
+      showMessage('', 'info');
+
+      // ¿Tenemos coords? Si no, geocodificar solo esta iglesia.
+      if (typeof item.lat !== 'number' || typeof item.lng !== 'number') {
+        el.mapWrap.hidden = false; el.mapLoading.hidden = false;
+        el.mapLoadingText.textContent = 'Ubicando tu Universal…';
+        await initMap().catch(function () {});
+        try {
+          var coords = await geocodeChurch(item);
+          if (coords) { item.lat = coords.lat; item.lng = coords.lng; }
+        } catch (e) {}
+      } else {
+        el.mapWrap.hidden = false; el.mapLoading.hidden = false;
+        el.mapLoadingText.textContent = 'Cargando mapa…';
+        await initMap().catch(function () {});
+      }
+
+      el.mapLoading.hidden = true;
+
+      if (typeof item.lat !== 'number') {
+        el.mapWrap.hidden = true;
+        showMessage('No pudimos ubicar esta iglesia en el mapa, pero puedes usar los botones de abajo.', 'info');
+        renderNavLinks();
+        postHeight();
+        return;
+      }
+
+      if (state.map) { state.map.invalidateSize(); renderMarkers(); }
+      await updateRoute();
+      renderNavLinks();
+      postHeight();
+    }
+
+    async function updateRoute() {
+      if (!state.userPoint || !state.selected || typeof state.selected.lat !== 'number') {
+        el.route.hidden = true; drawRoute(null);
+        if (state.map && typeof state.selected.lat === 'number') {
+          state.map.setView([state.selected.lat, state.selected.lng], 15);
+        }
+        return;
+      }
+      el.route.hidden = false;
+      el.routeStats.textContent = 'Calculando ruta…';
+      try {
+        var r = await fetchRoute(state.userPoint, state.selected, state.mode);
+        state.route = r;
+        drawRoute(r.geometry);
+        el.routeStats.textContent = (state.mode === 'foot' ? '🚶 ' : '🚗 ') +
+          formatDuration(r.durationS) + ' · ' + formatDistance(r.distanceM / 1000);
+        if (state.map) state.map.fitBounds(
+          [[state.userPoint.lat, state.userPoint.lng], [state.selected.lat, state.selected.lng]],
+          { padding: [40, 40], maxZoom: 15 });
+      } catch (e) {
+        state.route = null; drawRoute(null);
+        el.routeStats.textContent = 'En línea recta: ' +
+          formatDistance(haversineKm(state.userPoint.lat, state.userPoint.lng, state.selected.lat, state.selected.lng));
+      }
+    }
+
+    /* ===================================================================== */
+    /*  Enlaces de navegación y acciones                                     */
+    /* ===================================================================== */
+    function renderNavLinks() {
+      var it = state.selected;
+      if (!it || typeof it.lat !== 'number') { el.navlinks.hidden = true; return; }
+      var dest = it.lat + ',' + it.lng;
+      var links = [];
+      if (state.userPoint) {
+        var gmode = state.mode === 'foot' ? 'walking' : 'driving';
+        links.push({ label: 'Cómo llegar (Google)', href: 'https://www.google.com/maps/dir/?api=1&origin=' +
+          state.userPoint.lat + ',' + state.userPoint.lng + '&destination=' + dest + '&travelmode=' + gmode });
+      } else {
+        links.push({ label: 'Ver en Google Maps', href: 'https://www.google.com/maps?q=' + dest });
+      }
+      links.push({ label: 'Waze', href: 'https://waze.com/ul?ll=' + dest + '&navigate=yes', muted: true });
+      el.navlinks.innerHTML = '';
+      links.forEach(function (l) {
+        var a = document.createElement('a');
+        a.className = 'hs-navlink' + (l.muted ? ' hs-navlink--muted' : '');
+        a.href = l.href; a.target = '_blank'; a.rel = 'noopener noreferrer';
+        a.textContent = l.label;
+        el.navlinks.appendChild(a);
+      });
+      el.navlinks.hidden = false;
+    }
+
+    function updateActionLinks() {
+      var params = new URLSearchParams();
+      if (state.selected) params.set('iglesia', state.selected.name);
+      var sep = HS_CONFIG.peticionUrl.indexOf('?') === -1 ? '?' : '&';
+      el.download.href = HS_CONFIG.peticionUrl + (params.toString() ? sep + params.toString() : '');
+      el.vote.href = HS_CONFIG.portalUrl;
+    }
+
+    /* ===================================================================== */
+    /*  Geolocalización + cercanas                                           */
+    /* ===================================================================== */
+    function getPosition() {
+      return new Promise(function (resolve, reject) {
+        if (!navigator.geolocation) { reject(new Error('nogeo')); return; }
+        navigator.geolocation.getCurrentPosition(
+          function (p) { resolve({ lat: p.coords.latitude, lng: p.coords.longitude }); },
+          function (err) { reject(err); },
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+        );
+      });
+    }
+    function cityTokens(addr) {
+      var stop = { 'mexico': 1, 'centro': 1, 'cdmx': 1, 'ciudad de mexico': 1 };
+      var fields = [addr.suburb, addr.neighbourhood, addr.city_district, addr.city,
+        addr.town, addr.village, addr.municipality, addr.county, addr.state];
+      var tokens = [];
+      fields.forEach(function (f) {
+        var t = normalizePlace(f || '');
+        if (t.length >= 4 && !stop[t] && tokens.indexOf(t) === -1) tokens.push(t);
+      });
+      return tokens;
+    }
+    function rankByCity(tokens) {
+      return state.items.map(function (it) {
+        var hay = normalizePlace(it.name + ' ' + it.bloque + ' ' + (it.direccion || ''));
+        var loc = normalizePlace(localityFromName(it.name));
+        var score = 0;
+        tokens.forEach(function (t) {
+          if (hay.indexOf(t) !== -1) score += t.length;
+          if (loc && loc.indexOf(t) !== -1) score += t.length * 2;
+        });
+        return { item: it, score: score };
+      }).filter(function (x) { return x.score > 0; })
+        .sort(function (a, b) { return b.score - a.score; })
+        .slice(0, 6).map(function (x) { return x.item; });
+    }
+    function renderNearby(list) {
+      el.nearbyList.innerHTML = '';
+      list.forEach(function (it) {
+        var li = document.createElement('li');
+        var btn = document.createElement('button');
+        btn.type = 'button'; btn.className = 'hs-nearby__item';
+        var dist = (typeof it.lat === 'number' && state.userPoint)
+          ? formatDistance(haversineKm(state.userPoint.lat, state.userPoint.lng, it.lat, it.lng)) : '';
+        btn.innerHTML = '<span class="hs-nearby__main"><strong></strong><span></span></span><span class="hs-nearby__dist"></span>';
+        btn.querySelector('strong').textContent = it.name;
+        btn.querySelector('.hs-nearby__main span').textContent = it.direccion || localityFromName(it.name) || it.bloque;
+        btn.querySelector('.hs-nearby__dist').textContent = dist;
+        btn.addEventListener('click', function () { selectChurch(it); });
+        li.appendChild(btn); el.nearbyList.appendChild(li);
+      });
+      el.nearby.hidden = list.length === 0;
+      postHeight();
+    }
+
+    async function onLocate() {
+      el.locate.disabled = true;
+      showMessage('Obteniendo tu ubicación…', 'info');
+      try {
+        var pos = await getPosition();
+        state.userPoint = pos;
+        showMessage('Buscando Universal cercanas…', 'info');
+        var addr = await reverseGeocode(pos.lat, pos.lng);
+        var tokens = cityTokens(addr);
+        var ranked = rankByCity(tokens);
+        if (!ranked.length) {
+          showMessage('No encontramos coincidencias por tu zona. Busca tu Universal por nombre.', 'info');
+        } else {
+          showMessage('', 'info');
+          renderNearby(ranked);
+        }
+      } catch (e) {
+        if (e && (e.code === 1 || e.message === 'nogeo')) {
+          showMessage('No pudimos acceder a tu ubicación. Activa los permisos o busca por nombre.', 'err');
+        } else {
+          showMessage('No pudimos obtener tu ubicación. Busca tu Universal por nombre.', 'err');
+        }
+      } finally {
+        el.locate.disabled = false;
+        postHeight();
+      }
+    }
+
+    /* ===================================================================== */
+    /*  Eventos                                                              */
+    /* ===================================================================== */
+    function bind() {
+      el.tel.textContent = HS_CONFIG.telefono;
+      el.call.href = 'tel:' + HS_CONFIG.telefonoHref;
+      el.vote.href = HS_CONFIG.portalUrl;
+      el.download.href = HS_CONFIG.peticionUrl;
+
+      var debounce;
+      el.input.addEventListener('input', function () {
+        clearTimeout(debounce);
+        debounce = setTimeout(function () { renderResults(filterItems(el.input.value)); }, 120);
+      });
+      el.input.addEventListener('focus', function () {
+        if (el.input.value.trim().length >= 2) renderResults(filterItems(el.input.value));
+      });
+      document.addEventListener('click', function (e) {
+        if (!el.results.contains(e.target) && e.target !== el.input) el.results.hidden = true;
+      });
+      el.locate.addEventListener('click', onLocate);
+      el.change.addEventListener('click', function () {
+        state.selected = null;
+        el.selected.hidden = true; el.mapWrap.hidden = true; el.route.hidden = true;
+        el.navlinks.hidden = true;
+        updateActionLinks();
+        el.input.focus();
+        postHeight();
+      });
+      Array.prototype.forEach.call(document.querySelectorAll('.hs-mode'), function (btn) {
+        btn.addEventListener('click', function () {
+          if (state.mode === btn.getAttribute('data-mode')) return;
+          state.mode = btn.getAttribute('data-mode');
+          Array.prototype.forEach.call(document.querySelectorAll('.hs-mode'), function (b) {
+            b.classList.toggle('hs-mode--active', b === btn);
+          });
+          updateRoute(); renderNavLinks();
+        });
+      });
+      window.addEventListener('resize', function () { if (state.map) state.map.invalidateSize(); });
+    }
+
+    /* ===================================================================== */
+    /*  Init                                                                 */
+    /* ===================================================================== */
+    bind();
+    loadCatalog().then(function () { postHeight(); });
+    window.addEventListener('load', postHeight);
+  })();
+  </script>
+</div>
+<!-- HS:WIDGET-END -->
+
+</body>
+</html>
