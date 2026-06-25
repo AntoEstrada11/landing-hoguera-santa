@@ -1,11 +1,19 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hoguera Santa en el Monte Sión</title>
 <!-- ============================================================= -->
-<!-- Hoguera Santa en el Monte Sion - bloque para Elementor (HTML) -->
-<!-- Pega TODO esto en un widget "HTML" de Elementor.              -->
-<!-- Revisa los marcadores TODO: imagen hero y URL del portal.     -->
+<!-- Pagina autocontenida para incrustar via <iframe>.             -->
+<!-- Subela a tu hosting (mismo dominio que WordPress) y apunta el  -->
+<!-- iframe a su URL. Revisa los marcadores TODO (URL del portal).  -->
 <!-- ============================================================= -->
 <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap" rel="stylesheet">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Encode+Sans+Semi+Expanded:wght@400;500;600;700&display=swap');
+
+html, body { margin: 0; padding: 0; background: #160a05; }
 
 :root {
   --lp-ink: #1a0f0a;
@@ -3169,6 +3177,8 @@ a.lp-cta-meta__value:hover {
 }
 
 </style>
+</head>
+<body>
 <main class="landing">
 
     <!-- ============================ HERO (cinematográfico Monte Sión) ============================ -->
@@ -3685,3 +3695,26 @@ a.lp-cta-meta__value:hover {
     }
   })();
   </script>
+
+  <!-- Auto-ajuste de alto del iframe (funciona en el mismo dominio que WordPress) -->
+  <script>
+  (function () {
+    function fit() {
+      try {
+        if (window.frameElement) {
+          window.frameElement.style.height = document.documentElement.scrollHeight + 'px';
+        }
+      } catch (e) { /* distinto origen: usa postMessage abajo */ }
+      try {
+        parent.postMessage({ hogueraHeight: document.documentElement.scrollHeight }, '*');
+      } catch (e) {}
+    }
+    window.addEventListener('load', fit);
+    window.addEventListener('resize', fit);
+    document.addEventListener('click', function () { setTimeout(fit, 450); });
+    document.addEventListener('input', function () { setTimeout(fit, 120); });
+    setInterval(fit, 1200);
+  })();
+  </script>
+</body>
+</html>

@@ -8,8 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="assets/css/landing.css?v=6" />
-  <script>document.documentElement.classList.add('js-reveal');</script>
+  <link rel="stylesheet" href="assets/css/landing.css?v=7" />
 </head>
 <body>
   <main class="landing">
@@ -339,6 +338,9 @@
 
   <script>
   (function () {
+    // Activa el modo animación SOLO si este script llega a ejecutarse.
+    document.documentElement.classList.add('js-reveal');
+
     // ---- Videos de YouTube (fachada: carga al hacer clic) ----
     Array.prototype.forEach.call(document.querySelectorAll('.lp-video__btn'), function (btn) {
       var id = btn.getAttribute('data-yt');
@@ -369,6 +371,13 @@
         });
       }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
       Array.prototype.forEach.call(revealEls, function (el) { io.observe(el); });
+
+      // Failsafe: revela lo que siga oculto si el observer no dispara.
+      setTimeout(function () {
+        Array.prototype.forEach.call(revealEls, function (el) {
+          if (!el.classList.contains('is-in')) el.classList.add('is-in');
+        });
+      }, 2600);
     }
 
     // ---- Compositor de petición sobre la hoja oficial (canvas) ----
