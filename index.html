@@ -316,8 +316,7 @@
         <div class="lp-voto-cta">
           <p class="lp-voto-cta__intro">Ya escribí mi petición y ahora quiero hacer mi voto de fe</p>
           <span class="lp-voto-cta__arrows" aria-hidden="true">⇓ ⇓ ⇓</span>
-          <!-- TODO: reemplaza href="#" por la URL real del portal de voto / donación -->
-          <a href="#" class="lp-btn lp-btn--accent lp-btn--lg lp-voto-cta__btn" target="_blank" rel="noopener noreferrer">
+          <a href="https://primicias.iurdsys.net/" class="lp-btn lp-btn--accent lp-btn--lg lp-voto-cta__btn" target="_blank" rel="noopener noreferrer">
             Realiza tu voto de fidelidad en línea
           </a>
           <p class="lp-voto-cta__after">
@@ -440,6 +439,82 @@
       var counter = document.getElementById('lp-pet-count');
       var img = new Image();
       var ready = false;
+      var pendingDownload = false;
+
+      var PDF_LETTER = { unit: 'mm', format: 'letter', margin: 8 };
+
+      function loadJsPDF() {
+        if (window.jspdf && window.jspdf.jsPDF) {
+          return Promise.resolve(window.jspdf.jsPDF);
+        }
+        if (loadJsPDF._pending) return loadJsPDF._pending;
+        loadJsPDF._pending = new Promise(function (resolve, reject) {
+          var s = document.createElement('script');
+          s.src = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js';
+          s.crossOrigin = 'anonymous';
+          s.referrerPolicy = 'no-referrer';
+          s.onload = function () {
+            loadJsPDF._pending = null;
+            if (window.jspdf && window.jspdf.jsPDF) resolve(window.jspdf.jsPDF);
+            else reject(new Error('jspdf'));
+          };
+          s.onerror = function () {
+            loadJsPDF._pending = null;
+            reject(new Error('jspdf'));
+          };
+          document.head.appendChild(s);
+        });
+        return loadJsPDF._pending;
+      }
+
+      function downloadAsJpeg() {
+        var url = canvas.toDataURL('image/jpeg', 0.92);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'mi-peticion-monte-sion.jpg';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+
+      function downloadPeticionPdf() {
+        if (!ready) {
+          pendingDownload = true;
+          return;
+        }
+        pendingDownload = false;
+        render();
+
+        loadJsPDF().then(function (jsPDF) {
+          var imgData = canvas.toDataURL('image/jpeg', 0.92);
+          var pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: PDF_LETTER.unit,
+            format: PDF_LETTER.format
+          });
+          var pageW = pdf.internal.pageSize.getWidth();
+          var pageH = pdf.internal.pageSize.getHeight();
+          var margin = PDF_LETTER.margin;
+          var availW = pageW - margin * 2;
+          var availH = pageH - margin * 2;
+          var iw = canvas.width;
+          var ih = canvas.height;
+          var w = availW;
+          var h = (ih / iw) * w;
+          if (h > availH) {
+            h = availH;
+            w = (iw / ih) * h;
+          }
+          var x = margin + (availW - w) / 2;
+          var y = margin + (availH - h) / 2;
+          pdf.addImage(imgData, 'JPEG', x, y, w, h);
+          pdf.save('mi-peticion-monte-sion.pdf');
+        }).catch(function () {
+          try { downloadAsJpeg(); } catch (e) {
+            window.open(canvas.toDataURL('image/png'), '_blank');
+          }
+        });
+      }
 
       // Geometría del área de escritura (fracciones de la hoja)
       var GEO = {
@@ -502,6 +577,7 @@
         if (document.fonts && document.fonts.load) {
           document.fonts.load("600 60px 'Caveat'").then(render).catch(function () {});
         }
+        if (pendingDownload) downloadPeticionPdf();
       };
       img.src = 'assets/img/peticion/peticion-monte-sion.jpg';
 
@@ -511,20 +587,7 @@
       });
 
       if (dl) {
-        dl.addEventListener('click', function () {
-          render();
-          try {
-            var url = canvas.toDataURL('image/jpeg', 0.92);
-            var a = document.createElement('a');
-            a.href = url;
-            a.download = 'mi-peticion-monte-sion.jpg';
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-          } catch (err) {
-            window.open(canvas.toDataURL('image/png'), '_blank');
-          }
-        });
+        dl.addEventListener('click', downloadPeticionPdf);
       }
     }
 
