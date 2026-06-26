@@ -150,15 +150,14 @@ se filtran) en vez de pegar el HTML completo. Por eso el entregable es `hoguera-
 - **Slider "¿Qué puedes esperar?":** 3 diapositivas (video de YouTube + versículo), autoplay con
   flechas y puntos, pausa al interactuar. Videos: `GIeJ2iYUZaE`, `idEbXWmndj8`, `4q7WPFFpuJo`.
 - **Compositor de peticiones:** el usuario escribe su petición y se dibuja sobre la hoja oficial;
-  se puede descargar como imagen. Imagen base: `assets/img/peticion/peticion-monte-sion.jpg`.
-- **CTA "voto de fe":** botón con `href="#"` — **reemplázalo** por la URL real del portal.
+  se puede descargar como PDF (hoja en blanco o con texto). Imagen base: `assets/img/peticion/peticion-monte-sion.jpg`.
+- **CTA "voto de fe":** enlace a [primicias.iurdsys.net](https://primicias.iurdsys.net/) (nueva pestaña).
 
 ---
 
 ## Pendientes / TODO
 
-- [ ] Poner la **URL real** del portal de voto/donación (botón `lp-voto-cta__btn`, hoy `href="#"`).
-- [ ] Confirmar las URLs definitivas de las imágenes en producción.
+- [ ] (Opcional) Confirmar las URLs definitivas de las imágenes en producción.
 - [ ] (Opcional) Limpiar archivos heredados que ya no se usan.
 
 ---
