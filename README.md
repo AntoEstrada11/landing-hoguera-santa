@@ -1,34 +1,67 @@
 # Landing "Hoguera Santa en el Monte Sión"
 
-Landing y **bloque embebible autocontenido** para la campaña **Hoguera Santa en el Monte Sión**
-de la Iglesia Universal del Reino de Dios. Reutiliza el diseño de la landing de fidelidad/diezmo,
-pero con el contenido, paleta (fuego) y enlaces de Hoguera Santa.
+Landing **autocontenida** para la campaña **Hoguera Santa en el Monte Sión** de la Iglesia
+Universal del Reino de Dios. Estilo cinematográfico oscuro con acentos dorados, tipografía serif
+(Cormorant Garamond), animaciones de aparición al hacer scroll, un slider de promesas
+(video + versículo) y un **compositor de peticiones** que dibuja el texto del usuario sobre la
+hoja oficial y permite descargarla.
 
-Pensado para insertarse **dentro de WordPress + Elementor** (solo acceso a `wp-admin`, sin Node,
-sin FTP/SSH). El entregable principal es un bloque **HTML + CSS + JS** que se pega en un widget
-"HTML personalizado" de Elementor. **No requiere servidor Node/Nitro.**
+Pensada para vivir **dentro de WordPress** (en `universal.org.mx`), incrustada mediante un
+**`<iframe>`**. Es 100% estática: HTML + CSS + JS, sin Node ni backend.
 
 ---
 
-## Contenido del repo
+## Estructura del repo
 
 ```
 landing-hoguera-santa/
-├── index.html              # Página demo completa (hero + secciones + bloque interactivo)
+├── index.html              # Página demo (assets locales, ideal para desarrollo)
+├── hoguera-embed.html      # ⭐ Página autocontenida para incrustar por <iframe> (producción)
+├── elementor-embed.html    # Bloque HTML+CSS+JS inline (solo si se pega en un widget HTML con permisos)
 ├── peticion.html           # Hoja de petición imprimible (Monte Sión)
-├── widget/
-│   └── index.html          # ⭐ Bloque embebible AUTOCONTENIDO (esto se pega en Elementor)
 ├── assets/
-│   └── css/landing.css     # Tema visual (fuego) para la página demo
-├── data/
-│   └── iglesias.json       # Catálogo de iglesias (respaldo, ya embebido en el widget)
-├── elementor-hoguera-localizador.json  # Plantilla Elementor importable (opcional)
+│   ├── css/landing.css      # Tema visual (cinematográfico/dorado) de la demo
+│   └── img/
+│       ├── hero/hero-monte-sion.png        # Imagen del hero
+│       └── peticion/peticion-monte-sion.jpg # Hoja de petición (local, para el canvas)
 └── README.md
 ```
 
-> El **widget** (`widget/index.html`) es 100% autocontenido: trae su CSS y su JS en línea y
-> carga Leaflet por CDN. El catálogo de iglesias va **embebido** dentro del propio widget como
-> respaldo, así que funciona aunque la API externa no responda.
+> **¿Cuál archivo uso?**
+> - **`hoguera-embed.html`** → es el entregable de producción. Se sube a un hosting y se incrusta con un `<iframe>`.
+> - **`index.html`** → demo de desarrollo; usa los assets locales (`assets/...`).
+> - **`elementor-embed.html`** → solo sirve si tienes permiso `unfiltered_html` para pegar `<style>`/`<script>` directo en un widget HTML. Si no, usa el iframe.
+
+---
+
+## Ramas y flujo de trabajo
+
+Repositorio: **https://github.com/AntoEstrada11/landing-hoguera-santa**
+
+| Rama | Propósito |
+|------|-----------|
+| **`main`** | Producción. Código estable y publicado. **No se hace push directo** (solo vía PR). |
+| **`dev`** | Integración de desarrolladores. |
+| **`contenido`** | Edición de textos / diseño (para los colaboradores no técnicos). |
+
+**Flujo sugerido:**
+
+1. **Diseñadores / edición de texto:** trabajan en `contenido` → abren **Pull Request a `dev`**.
+2. **Desarrolladores:** integran en `dev` → cuando está listo, **Pull Request de `dev` a `main`** (producción).
+3. `main` debería estar **protegida** (Settings → Branches): requiere PR y, opcionalmente, aprobaciones.
+
+```bash
+# Clonar
+git clone https://github.com/AntoEstrada11/landing-hoguera-santa.git
+cd landing-hoguera-santa
+
+# Trabajar en contenido (textos)
+git checkout contenido
+# ...editar textos en index.html / hoguera-embed.html...
+git add -A && git commit -m "Ajuste de textos sección X"
+git push origin contenido
+# luego abrir PR a dev en GitHub
+```
 
 ---
 
@@ -42,136 +75,91 @@ python -m http.server 8765
 # luego abre http://localhost:8765
 ```
 
-- `http://localhost:8765/` → landing demo completa.
-- `http://localhost:8765/widget/index.html` → solo el bloque embebible.
+- `http://localhost:8765/` → demo completa (`index.html`).
+- `http://localhost:8765/hoguera-embed.html` → la página que se incrusta en producción.
 - `http://localhost:8765/peticion.html` → hoja de petición.
 
-> Abrir los archivos con `file://` (doble clic) puede bloquear la geolocalización y algunas
-> peticiones (CORS). Usa siempre un servidor local para probar el mapa.
+> Usa siempre un servidor local (no `file://`): el compositor de peticiones dibuja una imagen en
+> `<canvas>` y `file://` puede bloquear esa operación.
 
 ---
 
-## Cómo pegar el bloque en Elementor
+## Despliegue (incrustar en WordPress)
 
-### Opción A — Pegar el HTML manualmente (recomendada)
+La página se publica como archivo y se incrusta con un `<iframe>`. Hay dos escenarios según
+dónde se aloje `hoguera-embed.html`.
 
-1. Abre **`widget/index.html`** y edita el objeto **`HS_CONFIG`** (ver tabla abajo) con tus URLs
-   reales (portal de pago, hoja de petición, API de iglesias…).
-2. Copia **todo** lo que está entre los comentarios:
+### Opción A — Mismo dominio que WordPress (recomendada)
 
-   ```html
-   <!-- HS:WIDGET-START -->
-   ...
-   <!-- HS:WIDGET-END -->
-   ```
+Sube `hoguera-embed.html` al propio servidor de `universal.org.mx`
+(p. ej. `wp-content/uploads/hoguera/`) por **cPanel / FTP / WP File Manager**:
 
-3. En Elementor: arrastra un widget **"HTML"** (HTML personalizado) a la sección donde quieras
-   el localizador y **pega** ahí el contenido.
-4. Publica y prueba en el front-end (no solo en el editor).
+```
+https://universal.org.mx/wp-content/uploads/hoguera/hoguera-embed.html
+```
 
-> ⚠️ **Prueba que el widget HTML de Elementor permita `<script>`.** Algunos temas o plugins de
-> seguridad lo filtran. Si el mapa no carga, revisa la consola del navegador y la sección
-> "Solución de problemas".
+Ventajas: el **alto del iframe se autoajusta** solo (script interno) y la **descarga de la
+petición funciona** sin CORS (imagen en el mismo dominio).
 
-### Opción B — Importar plantilla
+Incrustar (widget HTML de Elementor, o shortcode de **Advanced iFrame** si no tienes permisos):
 
-1. En WordPress: **Plantillas → Plantillas guardadas → Importar plantillas**.
-2. Sube `elementor-hoguera-localizador.json`.
-3. Inserta la plantilla en tu página y edita el `HS_CONFIG` dentro del widget HTML.
+```html
+<iframe
+  src="https://universal.org.mx/wp-content/uploads/hoguera/hoguera-embed.html"
+  title="Hoguera Santa en el Monte Sión"
+  scrolling="no"
+  style="display:block;width:100vw;max-width:100vw;margin-left:calc(50% - 50vw);border:0;height:100vh;overflow:hidden;">
+</iframe>
+```
 
----
+O con Advanced iFrame:
 
-## Configuración del widget (`HS_CONFIG`)
+```text
+[advanced_iframe src="https://universal.org.mx/wp-content/uploads/hoguera/hoguera-embed.html" width="100%" height="3000" scrolling="no"]
+```
 
-Al inicio del `<script>` del widget hay un objeto editable:
+### Opción B — Hosting externo (Netlify / GitHub Pages / Cloudflare)
 
-| Clave | Qué es | Ejemplo |
-|-------|--------|---------|
-| `iglesiasApiUrl` | URL de la API de iglesias (formato bloques). Vacío = usa solo el catálogo embebido. | `https://tu-api.com/api/elementos` |
-| `iglesiasApiKey` | **No la pongas en producción** (queda expuesta). Autoriza por CORS/origen. | `''` |
-| `portalUrl` | Enlace al portal de pago / voto de fe ya existente. **Reemplázalo.** | `https://www.mercadopago.com.mx/...` |
-| `peticionUrl` | URL de la hoja de petición. En WP usa la URL absoluta del archivo subido. | `https://tusitio.com/peticion.html` |
-| `telefono` / `telefonoHref` | Teléfono visible y para `tel:` | `55 55 74 32 66` / `+525555743266` |
-| `nominatimBase` | Servicio de geocodificación (Nominatim público). | (por defecto) |
-| `osrmBase` | Servicio de rutas (OSRM público). | (por defecto) |
+Sube **toda la carpeta** (para que estén `assets/`) y apunta el iframe a esa URL externa.
 
-> El botón **"Hacer mi voto de fe"** es **solo un enlace** a tu portal de pago existente.
-> Aquí **no se integra ninguna pasarela de pago**.
+⚠️ Al ser **otro dominio**:
+- El alto **no** se autoajusta → usa un `height` fijo grande en el shortcode/iframe.
+- La **descarga de la petición** falla a menos que la imagen de la hoja esté en el **mismo dominio**
+  que la página. En ese caso, apunta la imagen de petición a la ruta local
+  `assets/img/peticion/peticion-monte-sion.jpg` (mismo origen) en lugar de la URL de WordPress.
 
 ---
 
-## Imágenes y videos
+## Permisos en WordPress (importante)
 
-- **Hero:** la demo ya usa un **slider con las 3 imágenes oficiales** de la campaña
-  (`/wp-content/uploads/2026/06/1.png`, `2.png`, `3.png`). Para cambiarlas, edita los `<img>`
-  dentro de `.lp-hero__media` en `index.html`.
-- **Sin barra de navegación:** la página no incluye menú propio (se inserta dentro de
-  `universal.org.mx`, que ya tiene el suyo).
-- **Testimonios en video:** la sección "Historias reales" embebe los videos oficiales de YouTube
-  con carga diferida (solo cargan al hacer clic, para no penalizar la velocidad):
-  `GIeJ2iYUZaE`, `idEbXWmndj8`, `4q7WPFFpuJo`.
-- **Hoja de petición oficial (imagen):**
-  `https://universal.org.mx/wp-content/uploads/2026/06/PETICION-MONTE-SION_l.jpg`
-  Puedes enlazarla directamente o usar `peticion.html` de este repo (rellena nombre, iglesia y
-  fecha automáticamente desde la URL).
+Si tu usuario **no es administrador completo** (no ves "Usuarios"/"Plugins"/"Ajustes"), WordPress
+**elimina** `<style>`, `<script>` e `<iframe>` pegados directamente en el contenido
+(falta la capacidad `unfiltered_html`). Síntomas típicos: "se ve sin CSS", el widget **HTML** no
+aparece en Elementor, o el editor se rompe.
+
+**Solución:** incrustar por **iframe** (los shortcodes/iframe de plugins como *Advanced iFrame* no
+se filtran) en vez de pegar el HTML completo. Por eso el entregable es `hoguera-embed.html` + iframe.
 
 ---
 
-## El localizador de iglesias + mapa
+## Contenido y recursos
 
-- **Buscador** por nombre / ciudad / dirección sobre el catálogo.
-- **"Usar mi ubicación"**: geolocaliza al usuario, hace *reverse geocode* (Nominatim) y muestra
-  las Universal cercanas por coincidencia de zona.
-- **Mapa Leaflet** (CDN) con marcador del usuario y de la iglesia, **ruta** a pie / auto (OSRM)
-  y botones a **Google Maps / Waze**.
-- **Descargar mi petición**: abre `peticion.html` con el nombre de la iglesia precargado.
-- **Hacer mi voto de fe**: enlaza a tu portal de pago.
-
-### Fuentes de datos externas (sin servidor propio)
-
-| Servicio | Uso | Nota |
-|----------|-----|------|
-| API de iglesias | Catálogo en vivo | Debe **habilitar CORS** para `universal.org.mx` |
-| Nominatim (OSM) | Geocodificación / reverse | Límite de uso público (~1 req/seg) |
-| OSRM (project-osrm) | Cálculo de rutas | Servicio público de demostración |
+- **Hero:** imagen `assets/img/hero/hero-monte-sion.png` (en producción puede apuntar a la URL de
+  WordPress). Versículo Joel 2:32 con tipografía serif dorada.
+- **Historias reales:** testimonios con foto circular y nombre.
+- **Slider "¿Qué puedes esperar?":** 3 diapositivas (video de YouTube + versículo), autoplay con
+  flechas y puntos, pausa al interactuar. Videos: `GIeJ2iYUZaE`, `idEbXWmndj8`, `4q7WPFFpuJo`.
+- **Compositor de peticiones:** el usuario escribe su petición y se dibuja sobre la hoja oficial;
+  se puede descargar como imagen. Imagen base: `assets/img/peticion/peticion-monte-sion.jpg`.
+- **CTA "voto de fe":** botón con `href="#"` — **reemplázalo** por la URL real del portal.
 
 ---
 
-## ⚠️ Consideraciones importantes (documentadas)
+## Pendientes / TODO
 
-1. **CORS de la API de iglesias.** Como el navegador llama directo a la API, esta debe responder
-   con `Access-Control-Allow-Origin` para tu dominio (`https://universal.org.mx`). Si no, el widget
-   usará automáticamente el **catálogo embebido** de respaldo.
-2. **API key.** No incrustes la API key en el navegador (cualquiera la ve). Autoriza la API
-   **por origen/CORS**. `iglesiasApiKey` solo para pruebas.
-3. **Coordenadas precargadas.** El catálogo embebido trae los nombres pero **no** coordenadas.
-   El widget geocodifica **solo la iglesia seleccionada** (1 petición a Nominatim por selección)
-   para respetar los límites de uso. **Ideal:** que la API entregue `lat`/`lng` por iglesia
-   (el widget ya los usa si vienen). Formato admitido por iglesia:
-   ```json
-   { "nombre": "CENTRO - QUERETARO", "direccion": "...", "lat": 20.59, "lng": -100.39 }
-   ```
-   Con coordenadas, el mapa muestra distancias y marcadores sin geocodificar.
-4. **Nominatim / OSRM públicos** tienen límites de uso. Para producción de alto tráfico,
-   conviene un servicio propio o coordenadas precargadas (ver punto 3).
-5. **`<script>` en Elementor.** Verifica que el widget HTML permita scripts; algunos plugins de
-   seguridad los eliminan.
-
----
-
-## Qué se quitó respecto a la landing de diezmo
-
-- Toda la lógica de **pago** (Mercado Pago): gate, checkout, composables, endpoints, `/pago/resultado`.
-- El **wizard** que pedía nombre/apellido/teléfono y "Continuar al pago".
-- La **analítica server-side** (`events.jsonl`). Para medir, usa Google Analytics del WordPress.
-- Toda dependencia de **endpoints `/api/*` propios (Nitro)**. Ahora todo es estático.
-
-## Qué se conservó / adaptó
-
-- Diseño y secciones: hero, enseñanza, beneficios, testimonios, FAQ (con contenido Hoguera).
-- Localizador de iglesias + mapa, ahora **autocontenido** (Leaflet por CDN, sin servidor propio).
-- Hoja de petición adaptada al **Monte Sión**.
-- Botón CTA **"Hacer mi voto de fe"** como enlace al portal existente.
+- [ ] Poner la **URL real** del portal de voto/donación (botón `lp-voto-cta__btn`, hoy `href="#"`).
+- [ ] Confirmar las URLs definitivas de las imágenes en producción.
+- [ ] (Opcional) Limpiar archivos heredados que ya no se usan.
 
 ---
 
@@ -179,10 +167,12 @@ Al inicio del `<script>` del widget hay un objeto editable:
 
 | Síntoma | Causa probable | Solución |
 |---------|----------------|----------|
-| El mapa no aparece | El tema/plugin filtró `<script>` o el CDN está bloqueado | Permite scripts en el widget HTML; revisa consola |
-| "No pudimos acceder a tu ubicación" | El sitio no está en HTTPS o se negó el permiso | La geolocalización exige HTTPS; acepta el permiso |
-| La búsqueda funciona pero no hay distancias | La API no entrega coordenadas | Carga `lat`/`lng` en el catálogo (ver consideración 3) |
-| No carga el catálogo en vivo | Falta CORS en la API | Usa el respaldo embebido o habilita CORS |
+| "Se ve sin CSS" / sin estilos | Usuario sin `unfiltered_html`; se borró `<style>`/`<script>` | Incrustar por **iframe**, no pegar el HTML |
+| El editor de Elementor no abre tras pegar | Bloque enorme pegado en el widget corrompe los datos | Pegar solo el `<iframe>` pequeño |
+| Texto invisible en algunas secciones | El script de animación no corrió | Ya hay *failsafe*; si persiste, incrustar por iframe (los scripts corren dentro) |
+| El iframe sale muy angosto | El tema lo mete en un contenedor | El embed ya hace *full-bleed*; o pon la sección en "Ancho completo" |
+| El alto del iframe no se ajusta | Está en otro dominio (cross-origin) | Aloja en el **mismo dominio** o usa `height` fijo |
+| La descarga de la petición falla | Imagen de petición en otro dominio (canvas "tainted") | Usa la imagen local (mismo origen que la página) |
 
 ---
 
