@@ -2895,6 +2895,12 @@ a.lp-cta-meta__value:hover {
   -webkit-text-fill-color: transparent;
   filter: drop-shadow(0 4px 30px rgba(255, 140, 50, 0.3)) drop-shadow(0 2px 12px rgba(0, 0, 0, 0.7));
 }
+.lp-hero__brand-verse {
+  margin: 0.5rem auto 0.6rem;
+  max-width: 26ch;
+  font-size: clamp(1.5rem, 3.6vw, 2.5rem);
+  line-height: 1.18;
+}
 .lp-hero__brand .lp-hero__verse-ref {
   margin: 0 auto;
   padding-bottom: 1rem;
