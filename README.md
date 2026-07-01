@@ -28,6 +28,10 @@ landing-hoguera-santa/
 │   └── img/
 │       ├── hero/hero-monte-sion.png          # Imagen del hero
 │       └── peticion/peticion-monte-sion.jpg  # Hoja de petición (para el canvas)
+├── Dockerfile                 # Imagen nginx para previsualizar
+├── docker-compose.yml         # Levanta la landing en http://localhost:8080
+├── nginx/default.conf         # Config nginx del contenedor
+├── docs/GITEA_BRANCH_PROTECTION.md  # Cómo proteger main (solo aneg mergea)
 ├── pegar-en-elementor.html   # Solo en rama `dev`: bloque listo para pegar en Elementor
 └── README.md
 ```
@@ -42,27 +46,59 @@ landing-hoguera-santa/
 
 ---
 
-## Ramas
+## Repositorios
 
-Repositorio: **https://github.com/AntoEstrada11/landing-hoguera-santa**
+| Remote | URL | Uso |
+|--------|-----|-----|
+| **Gitea (principal)** | https://git.allanmontero.com/aneg/landing-hoguera-santa | Equipo + PRs a `main` |
+| **GitHub** | https://github.com/AntoEstrada11/landing-hoguera-santa | Backup / jsDelivr CDN |
+
+```bash
+git remote add gitea https://git.allanmontero.com/aneg/landing-hoguera-santa.git
+```
+
+---
+
+## Ramas y protección de `main`
 
 | Rama | Para qué |
 |------|----------|
-| **`main`** | Producción. Solo lo editable (`index.html`, `assets/`, `README.md`). Limpia, para que edición identifique fácil qué tocar. |
-| **`dev`** | Desarrollo. Incluye además `pegar-en-elementor.html` (bloque de despliegue). |
+| **`main`** | Producción. Solo merge vía **Pull Request** aprobado por **aneg**. |
+| **`dev`** | Desarrollo. Incluye `pegar-en-elementor.html`. |
 | **`contenido`** | Edición de textos para colaboradores no técnicos. |
 
-**Flujo:** edición/desarrollo en `dev` (o `contenido`) → al estar listo, se lleva a `main`.
+**Flujo:** trabajo en `dev` (o `contenido`) → **PR a `main`** → **aneg aprueba y mergea**.
+
+Configuración paso a paso en Gitea (hacer una vez):  
+→ **[docs/GITEA_BRANCH_PROTECTION.md](docs/GITEA_BRANCH_PROTECTION.md)**
 
 ---
 
 ## Previsualizar localmente
 
-No hace falta Node. Con cualquier servidor estático:
+### Opción A — Docker (recomendado)
+
+Requisito: [Docker Desktop](https://www.docker.com/products/docker-desktop/) en ejecución.
+
+```bash
+docker compose up -d --build
+```
+
+Abrir **http://localhost:8080**
+
+Comandos útiles:
+
+```bash
+docker compose logs -f landing-hoguera-santa   # ver logs
+docker compose down                            # detener
+docker compose up -d --build                   # rebuild tras cambios
+```
+
+### Opción B — Python (sin Docker)
 
 ```bash
 python -m http.server 8000
-# luego abre: http://localhost:8000/index.html
+# http://localhost:8000/index.html
 ```
 
 > Usa siempre un servidor local (no `file://`): el compositor de peticiones dibuja sobre un

@@ -1,0 +1,16 @@
+services:
+  landing-hoguera-santa:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: landing-hoguera-santa:local
+    container_name: landing-hoguera-santa
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3

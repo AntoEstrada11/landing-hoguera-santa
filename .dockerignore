@@ -1,0 +1,7 @@
+.git
+.gitignore
+README.md
+docs
+pegar-en-elementor.html
+*.md
+.cursor
