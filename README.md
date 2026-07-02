@@ -112,14 +112,16 @@ python -m http.server 8000
 2. Crea una **Sección** en **Ancho completo** y con **padding 0**.
 3. Dentro, agrega el widget **HTML** (o *HTML personalizado*).
 4. Abre **`pegar-en-elementor.html`** (rama `dev`), copia **todo** y pégalo en el widget.
-5. **Publica**.
+5. **Publica** y revisa en **Ver página** (no solo en el editor).
 
-> **Importante:** el bloque lleva el **CSS completo inline** dentro de `<style>`. Elementor suele
-> eliminar los `<link>` externos al pegar HTML, por eso los estilos van embebidos. Si el editor se
-> pone lento al pegar (~110 KB), guarda y revisa en **Ver página** — en el sitio publicado se ve bien.
+> **Optimizado para Elementor:** el bloque es **ligero** (~40 KB). El CSS completo
+> (`landing-elementor.css`) se carga por JavaScript **solo en la página publicada**;
+> en el editor solo hay una vista previa mínima para no congelar el panel.
 >
-> Para regenerar el bloque tras cambiar `index.html` o `landing.css`:
-> `python scripts/gen-elementor.py`
+> Regenerar tras cambios: `python scripts/gen-elementor.py`
+>
+> Si al publicar no ves estilos, purga caché jsDelivr:
+> `https://purge.jsdelivr.net/gh/AntoEstrada11/landing-hoguera-santa@main/assets/css/landing-elementor.css`
 
 ---
 
