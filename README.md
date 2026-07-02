@@ -114,16 +114,12 @@ python -m http.server 8000
 4. Abre **`pegar-en-elementor.html`** (rama `dev`), copia **todo** y pégalo en el widget.
 5. **Publica**.
 
-Ese bloque carga el **CSS, el JS y las imágenes** desde el propio repo a través del CDN
-**jsDelivr**, así no tienes que subir nada más a WordPress.
-
-> **Caché del CDN:** con `@main`, jsDelivr puede tardar hasta ~12 h en reflejar cambios nuevos.
-> Para forzar la actualización del CSS visita una vez:
-> `https://purge.jsdelivr.net/gh/AntoEstrada11/landing-hoguera-santa@main/assets/css/landing.css`
-> (o cambia `@main` por un commit/tag fijo para congelar la versión).
+> **Importante:** el bloque lleva el **CSS completo inline** dentro de `<style>`. Elementor suele
+> eliminar los `<link>` externos al pegar HTML, por eso los estilos van embebidos. Si el editor se
+> pone lento al pegar (~110 KB), guarda y revisa en **Ver página** — en el sitio publicado se ve bien.
 >
-> **Requiere repo público** para que jsDelivr pueda servir los archivos. Si se vuelve privado,
-> habría que subir CSS/JS/imágenes a la Biblioteca de Medios de WordPress.
+> Para regenerar el bloque tras cambiar `index.html` o `landing.css`:
+> `python scripts/gen-elementor.py`
 
 ---
 
